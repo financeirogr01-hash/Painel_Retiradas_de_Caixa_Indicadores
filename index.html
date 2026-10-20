@@ -343,6 +343,24 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
       <div class="rx-share"><div class="rx-share-fill rx-share-sem"></div></div>
       <div class="rx-sub"><b class="rx-hi" data-source="por_loja" data-field="pct_sem_free" data-k="pct_sem_free">—</b> do total · CMV, CMO, OPEX e outras</div>
     </div>
+    <div class="rx-card rx-click rx-bn" data-drill-grupo="CMO sem free" role="button" tabindex="0" aria-label="Detalhar CMO sem free">
+      <div class="rx-label">CMO sem free</div>
+      <div class="rx-bn-num dash-skeleton" data-source="por_loja" data-field="cmo" data-k="cmo">—</div>
+      <div class="rx-share"><div class="rx-share-fill" data-pk="pct_cmo_sem_free"></div></div>
+      <div class="rx-sub"><b class="rx-hi" data-source="por_loja" data-field="pct_cmo_sem_free" data-k="pct_cmo_sem_free">—</b> do sem free · <span data-source="por_loja" data-field="pct_cmo_total" data-k="pct_cmo_total">—</span> do total · emergenciais, VT, feriado e endomarketing</div>
+    </div>
+    <div class="rx-card rx-click rx-bn" data-drill-grupo="OPEX" role="button" tabindex="0" aria-label="Detalhar OPEX">
+      <div class="rx-label">OPEX</div>
+      <div class="rx-bn-num dash-skeleton" data-source="por_loja" data-field="opex" data-k="opex">—</div>
+      <div class="rx-share"><div class="rx-share-fill" data-pk="pct_opex_sem_free"></div></div>
+      <div class="rx-sub"><b class="rx-hi" data-source="por_loja" data-field="pct_opex_sem_free" data-k="pct_opex_sem_free">—</b> do sem free · <span data-source="por_loja" data-field="pct_opex_total" data-k="pct_opex_total">—</span> do total</div>
+    </div>
+    <div class="rx-card rx-click rx-bn" data-drill-grupo="Outras" role="button" tabindex="0" aria-label="Detalhar outras despesas">
+      <div class="rx-label">Outras despesas</div>
+      <div class="rx-bn-num dash-skeleton" data-source="por_loja" data-field="outras" data-k="outras">—</div>
+      <div class="rx-share"><div class="rx-share-fill" data-pk="pct_outras_sem_free"></div></div>
+      <div class="rx-sub"><b class="rx-hi" data-source="por_loja" data-field="pct_outras_sem_free" data-k="pct_outras_sem_free">—</b> do sem free · <span data-source="por_loja" data-field="pct_outras_total" data-k="pct_outras_total">—</span> do total · fixas, segurança, devoluções e reembolsos</div>
+    </div>
     <div class="rx-card rx-click rx-bn rx-bn-cmv" data-drill-grupo="CMV" role="button" tabindex="0" aria-label="Detalhar CMV comprado no caixa">
       <div class="rx-label">CMV comprado no caixa</div>
       <div class="rx-bn-num dash-skeleton" data-source="cmv_resumo" data-field="valor" data-ck="valor">—</div>
@@ -585,6 +603,12 @@ dash.calc('por_loja', {
       pct_sem_free: o.total ? o.sem_free / o.total : 0,
       pct_cmv_total: o.total ? o.cmv / o.total : 0,
       pct_cmv_sem_free: o.sem_free ? o.cmv / o.sem_free : 0,
+      pct_cmo_total: o.total ? o.cmo / o.total : 0,
+      pct_cmo_sem_free: o.sem_free ? o.cmo / o.sem_free : 0,
+      pct_opex_total: o.total ? o.opex / o.total : 0,
+      pct_opex_sem_free: o.sem_free ? o.opex / o.sem_free : 0,
+      pct_outras_total: o.total ? o.outras / o.total : 0,
+      pct_outras_sem_free: o.sem_free ? o.outras / o.sem_free : 0,
       pct_total: geral ? o.total / geral : 0,
     })).sort((a, b) => b.total - a.total);
   },
@@ -914,7 +938,7 @@ function drawTake(pl, pd) {
 function drawKpis(pl) {
   const loja = curLoja();
   const atual = pl.status === 'ok' ? pl.data.find((r) => r.loja === loja) : null;
-  const fmt = { total: brl, freelancers: brl, sem_free: brl, cmv: brl, cmo: brl, opex: brl, outras: brl, lancamentos: int, a_validar: int, pct_free: pct, pct_sem_free: pct, pct_cmv_total: pct, pct_cmv_sem_free: pct };
+  const fmt = { total: brl, freelancers: brl, sem_free: brl, cmv: brl, cmo: brl, opex: brl, outras: brl, lancamentos: int, a_validar: int, pct_free: pct, pct_sem_free: pct, pct_cmv_total: pct, pct_cmv_sem_free: pct, pct_cmo_total: pct, pct_cmo_sem_free: pct, pct_opex_total: pct, pct_opex_sem_free: pct, pct_outras_total: pct, pct_outras_sem_free: pct };
   document.querySelectorAll('[data-k]').forEach((el) => {
     const k = el.dataset.k;
     el.setAttribute('data-where', 'loja=' + enc(loja));
@@ -1886,6 +1910,10 @@ function drawHero() {
   ct.style.background = cor(0); cs.style.background = cor(0);
   ct.style.width = atual ? (atual.pct_cmv_total * 100) + '%' : '0';
   cs.style.width = atual ? (atual.pct_cmv_sem_free * 100) + '%' : '0';
+  document.querySelectorAll('.rx-share-fill[data-pk]').forEach((b) => {
+    b.style.background = cor(1);
+    b.style.width = atual ? (atual[b.dataset.pk] * 100) + '%' : '0';
+  });
 
   // média por dia
   const md = document.querySelector('.rx-media');
