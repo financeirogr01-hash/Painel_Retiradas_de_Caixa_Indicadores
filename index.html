@@ -418,9 +418,9 @@ html,body{margin:0;background:var(--color-bg);color:var(--color-fg);font-family:
         <p class="rx-note" style="margin-bottom:0">Insumos comprados com dinheiro do caixa, fora do pedido normal. O sinal principal é a frequência: quantos dias do período a loja precisou comprar.</p>
       </div>
       <div class="rx-legend rx-cmv-sem" style="margin:0">
-        <span class="rx-legend-item"><i class="rx-sw" style="background:var(--color-bad)"></i>Alerta · 8+ dias</span>
-        <span class="rx-legend-item"><i class="rx-sw" style="background:var(--color-warn)"></i>Atenção · 4 a 7</span>
-        <span class="rx-legend-item"><i class="rx-sw" style="background:var(--color-ok)"></i>Ok · até 3</span>
+        <span class="rx-legend-item"><i class="rx-sw" style="background:var(--color-bad)"></i><span class="rx-lg-alerta">Alerta · 8+ dias</span></span>
+        <span class="rx-legend-item"><i class="rx-sw" style="background:var(--color-warn)"></i><span class="rx-lg-atencao">Atenção · 4 a 7</span></span>
+        <span class="rx-legend-item"><i class="rx-sw" style="background:var(--color-ok)"></i><span class="rx-lg-ok">Ok · até 3</span></span>
       </div>
     </div>
     <p class="rx-take rx-cmv-take dash-skeleton"></p>
@@ -571,6 +571,8 @@ window.dash = (() => {
 <script>
 
 const T = 'Todas as lojas';
+// limites do radar de CMV: 8 e 4 dias num período de 15, proporcionais ao período carregado
+const limitesCmv = (n) => ({ alerta: Math.max(2, Math.floor(n * 8 / 15)), atencao: Math.max(1, Math.floor(n * 4 / 15)) });
 
 dash.calc('por_loja', {
   inputs: ['retiradas'],
@@ -732,10 +734,10 @@ dash.calc('cmv_itens', {
 dash.calc('cmv_resumo', {
   inputs: ['retiradas'],
   title: 'Indicador de CMV no caixa',
-  description: 'Por loja: valor, compras, ticket médio e em quantos dias do período houve compra de CMV no caixa. Alerta = 8 dias ou mais; atenção = 4 a 7.',
+  description: 'Por loja: valor, compras, ticket médio e em quantos dias do período houve compra de CMV no caixa. Alerta = 8 dias ou mais a cada 15 do período; atenção = 4 a 7 (proporcional ao período).',
   fn: (retiradas) => {
-    const ALERTA = 8, ATENCAO = 4;
     const diasPeriodo = new Set(retiradas.map((r) => String(r.data).slice(0, 10))).size;
+    const { alerta: ALERTA, atencao: ATENCAO } = limitesCmv(diasPeriodo);
     const m = new Map();
     const linha = (loja) => {
       if (!m.has(loja)) m.set(loja, { loja, valor: 0, compras: 0, dias: new Set() });
@@ -1370,8 +1372,9 @@ function drawAlertas(p, loja) {
   const lojas = cr.data.filter((r) => r.loja !== T && (loja === T || r.loja === loja));
   const alerta = lojas.filter((r) => r.status === 'Alerta');
   const atencao = lojas.filter((r) => r.status === 'Atenção');
+  const lim = limitesCmv(dias.length);
   const regra = el('p', 'rx-det-sum');
-  regra.append(el('b', null, 'Regra: '), document.createTextNode('a loja entra em alerta quando compra insumo (CMV) com dinheiro do caixa em 8 dias ou mais dos ' + dias.length + ' do período; de 4 a 7 dias fica em atenção. Comprar quase todo dia indica que o pedido ou o estoque mínimo não está cobrindo a operação.'));
+  regra.append(el('b', null, 'Regra: '), document.createTextNode('a loja entra em alerta quando compra insumo (CMV) com dinheiro do caixa em ' + lim.alerta + ' dias ou mais dos ' + dias.length + ' do período; de ' + lim.atencao + ' a ' + (lim.alerta - 1) + ' dias fica em atenção. Comprar quase todo dia indica que o pedido ou o estoque mínimo não está cobrindo a operação.'));
   p.append(regra);
   const bloco = (titulo, lista, cls) => {
     if (!lista.length) return;
@@ -1401,7 +1404,7 @@ function drawAlertas(p, loja) {
       const itens = ci.data.filter((r) => r.loja === l.loja && r.item !== 'Outros').slice(0, 3);
       const pq = el('p', 'rx-al-pq');
       pq.append(el('b', null, 'Por quê: '), document.createTextNode('comprou insumo no caixa em ' + l.dias_com_compra + ' dos ' + l.dias_periodo + ' dias' +
-        (l.status === 'Alerta' ? ', acima do limite de 8 dias' : ', entre 4 e 7 dias') + '. ' + int.format(l.compras) + ' compras somando ' + brl.format(l.valor) + ' (ticket médio ' + brl.format(l.ticket) + ').'));
+        (l.status === 'Alerta' ? ', acima do limite de alerta (' + lim.alerta + ' dias)' : ', entre ' + lim.atencao + ' e ' + (lim.alerta - 1) + ' dias') + '. ' + int.format(l.compras) + ' compras somando ' + brl.format(l.valor) + ' (ticket médio ' + brl.format(l.ticket) + ').'));
       c.append(pq);
       if (itens.length) {
         const it = el('p', 'rx-al-itens');
@@ -1416,9 +1419,9 @@ function drawAlertas(p, loja) {
     });
     p.append(grade);
   };
-  bloco('Em alerta · 8 dias ou mais', alerta, 'rx-al-alerta');
-  bloco('Em atenção · 4 a 7 dias', atencao, 'rx-al-atencao');
-  if (!alerta.length && !atencao.length) p.append(el('p', 'rx-empty', loja === T ? 'Nenhuma loja em alerta ou atenção.' : loja + ' está ok: comprou CMV no caixa em até 3 dias.'));
+  bloco('Em alerta · ' + lim.alerta + ' dias ou mais', alerta, 'rx-al-alerta');
+  bloco('Em atenção · ' + lim.atencao + ' a ' + (lim.alerta - 1) + ' dias', atencao, 'rx-al-atencao');
+  if (!alerta.length && !atencao.length) p.append(el('p', 'rx-empty', loja === T ? 'Nenhuma loja em alerta ou atenção.' : loja + ' está ok: comprou CMV no caixa em até ' + (lim.atencao - 1) + ' dias.'));
 }
 
 // ---------- proteínas no caixa ----------
@@ -1773,9 +1776,13 @@ function drawCmv() {
   tk.replaceChildren();
   setLoading(tk, cr.status === 'loading' || ci.status === 'loading' ? 'loading' : 'ok');
   if (atual) {
+    const lim = limitesCmv(atual.dias_periodo);
+    document.querySelector('.rx-lg-alerta').textContent = 'Alerta · ' + lim.alerta + '+ dias';
+    document.querySelector('.rx-lg-atencao').textContent = 'Atenção · ' + lim.atencao + ' a ' + (lim.alerta - 1);
+    document.querySelector('.rx-lg-ok').textContent = 'Ok · até ' + (lim.atencao - 1);
     if (loja === T) {
       const pior = cr.data.find((r) => r.loja !== T);
-      tk.append(spanMark(int.format(atual.lojas_alerta), 'cmv_resumo', 'lojas_alerta', wl), tx(' lojas compraram insumo no caixa em 8 dias ou mais. '));
+      tk.append(spanMark(int.format(atual.lojas_alerta), 'cmv_resumo', 'lojas_alerta', wl), tx(' lojas compraram insumo no caixa em ' + lim.alerta + ' dias ou mais. '));
       if (pior) {
         const wp = 'loja=' + enc(pior.loja);
         tk.append(spanMark(pior.loja, 'cmv_resumo', 'loja', wp), tx(' lidera: comprou em '), spanMark(int.format(pior.dias_com_compra), 'cmv_resumo', 'dias_com_compra', wp),
